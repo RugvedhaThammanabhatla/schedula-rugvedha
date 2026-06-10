@@ -1,54 +1,29 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Body,
-  Query,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { DoctorService } from './doctor.service';
 
 @Controller('doctor')
 export class DoctorController {
-  private doctorProfile = {};
+  constructor(private readonly doctorService: DoctorService) {}
 
-  @Post('profile')
-  createProfile(@Query('role') role: string, @Body() body: any) {
-    if (role !== 'DOCTOR') {
-      throw new ForbiddenException('Only doctors can create profile');
-    }
-
-    this.doctorProfile = body;
-
-    return {
-      message: 'Doctor profile created',
-      data: this.doctorProfile,
-    };
+  @Get()
+  getDoctors(
+    @Query('specialization') specialization?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('availability') availability?: string,
+  ) {
+    return this.doctorService.getDoctors(
+      specialization,
+      search,
+      page,
+      limit,
+      availability,
+    );
   }
 
-  @Get('profile')
-  getProfile(@Query('role') role: string) {
-    if (role !== 'DOCTOR') {
-      throw new ForbiddenException('Only doctors can access profile');
-    }
-
-    return this.doctorProfile;
-  }
-
-  @Patch('profile')
-  updateProfile(@Query('role') role: string, @Body() body: any) {
-    if (role !== 'DOCTOR') {
-      throw new ForbiddenException('Only doctors can update profile');
-    }
-
-    this.doctorProfile = {
-      ...this.doctorProfile,
-      ...body,
-    };
-
-    return {
-      message: 'Doctor profile updated',
-      data: this.doctorProfile,
-    };
+  @Get(':id')
+  getDoctorById(@Param('id') id: string) {
+    return this.doctorService.getDoctorById(Number(id));
   }
 }
