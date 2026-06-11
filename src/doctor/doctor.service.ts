@@ -1,3 +1,5 @@
+import { RecurringAvailability } from './recurring-availability.entity';
+import { CustomAvailability } from './custom-availability.entity';
 import {
   Injectable,
   NotFoundException,
@@ -9,10 +11,16 @@ import { Doctor } from './doctor.entity';
 
 @Injectable()
 export class DoctorService {
-  constructor(
-    @InjectRepository(Doctor)
-    private doctorRepository: Repository<Doctor>,
-  ) {}
+   constructor(
+  @InjectRepository(Doctor)
+  private doctorRepository: Repository<Doctor>,
+
+  @InjectRepository(RecurringAvailability)
+  private recurringRepository: Repository<RecurringAvailability>,
+
+  @InjectRepository(CustomAvailability)
+  private customRepository: Repository<CustomAvailability>,
+) {}
   async getDoctors(
     specialization?: string,
     search?: string,
@@ -74,4 +82,203 @@ export class DoctorService {
 
   return doctor;
   }
+   async createAvailability(body: any) {
+  const { doctorId, dayOfWeek, startTime, endTime } = body;
+
+  if (startTime >= endTime) {
+    throw new BadRequestException('Invalid time range');
+  }
+
+  const duplicate = await this.recurringRepository.findOne({
+    where: {
+      doctorId,
+      dayOfWeek,
+      startTime,
+      endTime,
+    },
+  });
+
+  if (duplicate) {
+    throw new BadRequestException('Duplicate availability exists');
+  }
+
+  const existingSlots = await this.recurringRepository.find({
+    where: {
+      doctorId,
+      dayOfWeek,
+    },
+  });
+
+  for (const slot of existingSlots) {
+    const overlap =
+      startTime < slot.endTime &&
+      endTime > slot.startTime;
+
+    if (overlap) {
+      throw new BadRequestException(
+        'Overlapping slot exists',
+      );
+    }
+  }
+
+  const availability =
+    this.recurringRepository.create(body);
+
+  return await this.recurringRepository.save(
+    availability,
+  );
+}
+
+async getAvailability() {
+  return await this.recurringRepository.find();
+}
+
+ async updateAvailability(
+  id: number,
+  body: any,
+) {
+  const existing =
+    await this.recurringRepository.findOne({
+      where: { id },
+    });
+
+  if (!existing) {
+    throw new NotFoundException(
+      'Availability not found',
+    );
+  }
+
+  const {
+    doctorId,
+    dayOfWeek,
+    startTime,
+    endTime,
+  } = body;
+
+  if (startTime >= endTime) {
+    throw new BadRequestException(
+      'Invalid time range',
+    );
+  }
+
+  const slots =
+    await this.recurringRepository.find({
+      where: {
+        doctorId,
+        dayOfWeek,
+      },
+    });
+
+  for (const slot of slots) {
+    if (slot.id === id) {
+      continue;
+    }
+
+    const overlap =
+      startTime < slot.endTime &&
+      endTime > slot.startTime;
+
+    if (overlap) {
+      throw new BadRequestException(
+        'Overlapping slot exists',
+      );
+    }
+  }
+
+  await this.recurringRepository.update(
+    id,
+    body,
+  );
+
+  return await this.recurringRepository.findOne({
+    where: { id },
+  });
+}
+async deleteAvailability(id: number) {
+  const availability = await this.recurringRepository.findOne({
+    where: { id },
+  });
+
+  if (!availability) {
+    throw new NotFoundException('Availability not found');
+  }
+
+  await this.recurringRepository.delete(id);
+
+  return {
+    message: 'Availability deleted successfully',
+  };
+}
+
+ async createOverride(body: any) {
+  const {
+    doctorId,
+    date,
+    startTime,
+    endTime,
+  } = body;
+
+  if (startTime >= endTime) {
+    throw new BadRequestException(
+      'Invalid time range',
+    );
+  }
+
+  const duplicate =
+    await this.customRepository.findOne({
+      where: {
+        doctorId,
+        date,
+        startTime,
+        endTime,
+      },
+    });
+
+  if (duplicate) {
+    throw new BadRequestException(
+      'Duplicate override exists',
+    );
+  }
+
+  const slots =
+    await this.customRepository.find({
+      where: {
+        doctorId,
+        date,
+      },
+    });
+
+  for (const slot of slots) {
+    const overlap =
+      startTime < slot.endTime &&
+      endTime > slot.startTime;
+
+    if (overlap) {
+      throw new BadRequestException(
+        'Overlapping override exists',
+      );
+    }
+  }
+
+  const override =
+    this.customRepository.create(body);
+
+  return await this.customRepository.save(
+    override,
+  );
+}
+
+async getAvailabilityByDate(date: string) {
+  const override = await this.customRepository.find({
+    where: { date },
+  });
+
+  if (override.length > 0) {
+    return override;
+  }
+
+  return {
+    message: 'No custom availability found for this date',
+  };
+}
 }

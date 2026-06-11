@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+} from '@nestjs/common';
 import { DoctorService } from './doctor.service';
 
 @Controller('doctor')
@@ -20,6 +29,46 @@ export class DoctorController {
       limit,
       availability,
     );
+  }
+
+  @Post('availability')
+  createAvailability(@Body() body: any) {
+    return this.doctorService.createAvailability(body);
+  }
+
+  @Get('availability')
+  getAvailability() {
+    return this.doctorService.getAvailability();
+  }
+
+  @Patch('availability/:id')
+  updateAvailability(
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    return this.doctorService.updateAvailability(
+      Number(id),
+      body,
+    );
+  }
+
+  @Delete('availability/:id')
+  deleteAvailability(@Param('id') id: string) {
+    return this.doctorService.deleteAvailability(
+      Number(id),
+    );
+  }
+
+  @Post('availability/override')
+  createOverride(@Body() body: any) {
+    return this.doctorService.createOverride(body);
+  }
+
+  @Get('availability/date')
+  getAvailabilityByDate(
+    @Query('date') date: string,
+  ) {
+    return this.doctorService.getAvailabilityByDate(date);
   }
 
   @Get(':id')
