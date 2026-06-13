@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
+import { Appointment } from '../appointment/appointment.entity';
 
 @Injectable()
 export class DoctorService {
@@ -20,6 +21,10 @@ export class DoctorService {
 
   @InjectRepository(CustomAvailability)
   private customRepository: Repository<CustomAvailability>,
+
+  @InjectRepository(Appointment)
+  private appointmentRepository:
+  Repository<Appointment>,
 ) {}
   async getDoctors(
     specialization?: string,
@@ -416,12 +421,29 @@ async getDoctorSlots(
     }
   }
 
-  if (slots.length === 0) {
-    throw new NotFoundException(
-      'No slots available',
-    );
-  }
+   const bookedAppointments =
+  await this.appointmentRepository.find({
+    where: {
+      doctorId,
+      appointmentDate: date,
+    },
+  });
 
-  return slots;
+const availableSlots = slots.filter(
+  (slot) =>
+    !bookedAppointments.some(
+      (booking) =>
+        booking.startTime === slot.startTime &&
+        booking.endTime === slot.endTime,
+    ),
+);
+
+if (availableSlots.length === 0) {
+  throw new NotFoundException(
+    'No slots available',
+  );
+}
+
+return availableSlots;
 }
 }

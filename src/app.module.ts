@@ -8,10 +8,12 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { PatientModule } from './patient/patient.module';
+import { AppointmentModule } from './appointment/appointment.module';
 
 import { User } from './auth/user.entity';
 import { Doctor } from './doctor/doctor.entity';
 import { Patient } from './patient/patient.entity';
+import { Appointment } from './appointment/appointment.entity';
 
 @Module({
   imports: [
@@ -22,7 +24,12 @@ import { Patient } from './patient/patient.entity';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      entities: [User, Doctor, Patient],
+      entities: [
+        User,
+        Doctor,
+        Patient,
+        Appointment,
+      ],
       synchronize: true,
       autoLoadEntities: true,
       ssl: {
@@ -33,8 +40,11 @@ import { Patient } from './patient/patient.entity';
     AuthModule,
     DoctorModule,
     PatientModule,
+    AppointmentModule,
   ],
+
   controllers: [AppController],
+
   providers: [AppService],
 })
 export class AppModule {}
