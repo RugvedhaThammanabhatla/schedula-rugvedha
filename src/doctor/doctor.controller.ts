@@ -3,52 +3,88 @@ import {
   Get,
   Post,
   Patch,
-  Body,
+  Delete,
+  Param,
   Query,
-  ForbiddenException,
+  Body,
 } from '@nestjs/common';
+import { DoctorService } from './doctor.service';
 
 @Controller('doctor')
 export class DoctorController {
-  private doctorProfile = {};
+  constructor(private readonly doctorService: DoctorService) {}
 
-  @Post('profile')
-  createProfile(@Query('role') role: string, @Body() body: any) {
-    if (role !== 'DOCTOR') {
-      throw new ForbiddenException('Only doctors can create profile');
-    }
-
-    this.doctorProfile = body;
-
-    return {
-      message: 'Doctor profile created',
-      data: this.doctorProfile,
-    };
+  @Get()
+  getDoctors(
+    @Query('specialization') specialization?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('availability') availability?: string,
+  ) {
+    return this.doctorService.getDoctors(
+      specialization,
+      search,
+      page,
+      limit,
+      availability,
+    );
   }
 
-  @Get('profile')
-  getProfile(@Query('role') role: string) {
-    if (role !== 'DOCTOR') {
-      throw new ForbiddenException('Only doctors can access profile');
-    }
-
-    return this.doctorProfile;
+  @Post('availability')
+  createAvailability(@Body() body: any) {
+    return this.doctorService.createAvailability(body);
   }
 
-  @Patch('profile')
-  updateProfile(@Query('role') role: string, @Body() body: any) {
-    if (role !== 'DOCTOR') {
-      throw new ForbiddenException('Only doctors can update profile');
-    }
+  @Get('availability')
+  getAvailability() {
+    return this.doctorService.getAvailability();
+  }
 
-    this.doctorProfile = {
-      ...this.doctorProfile,
-      ...body,
-    };
+  @Patch('availability/:id')
+  updateAvailability(
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    return this.doctorService.updateAvailability(
+      Number(id),
+      body,
+    );
+  }
 
-    return {
-      message: 'Doctor profile updated',
-      data: this.doctorProfile,
-    };
+  @Delete('availability/:id')
+  deleteAvailability(@Param('id') id: string) {
+    return this.doctorService.deleteAvailability(
+      Number(id),
+    );
+  }
+
+  @Post('availability/override')
+  createOverride(@Body() body: any) {
+    return this.doctorService.createOverride(body);
+  }
+
+  @Get('availability/date')
+  getAvailabilityByDate(
+    @Query('date') date: string,
+  ) {
+    return this.doctorService.getAvailabilityByDate(date);
+  }
+
+  @Get(':doctorId/slots')
+getDoctorSlots(
+  @Param('doctorId') doctorId: string,
+  @Query('date') date: string,
+  @Query('duration') duration?: string,
+) {
+  return this.doctorService.getDoctorSlots(
+    Number(doctorId),
+    date,
+    duration,
+  );
+}
+@Get(':id')
+  getDoctorById(@Param('id') id: string) {
+    return this.doctorService.getDoctorById(Number(id));
   }
 }
