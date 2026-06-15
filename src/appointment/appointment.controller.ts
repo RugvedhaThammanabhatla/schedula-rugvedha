@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 
 import { AppointmentService } from './appointment.service';
+import { CreateAppointmentDto } from './appointment.dto';
 
 @Controller('appointments')
 export class AppointmentController {
@@ -17,8 +18,12 @@ export class AppointmentController {
   ) {}
 
   @Post()
-  createAppointment(@Body() body: any) {
-    return this.appointmentService.createAppointment(body);
+  createAppointment(
+    @Body() body: CreateAppointmentDto,
+  ) {
+    return this.appointmentService.createAppointment(
+      body,
+    );
   }
 
   @Get('my')
