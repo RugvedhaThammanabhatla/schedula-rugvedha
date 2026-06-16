@@ -28,42 +28,68 @@ export class AppointmentService {
     private patientRepository: Repository<Patient>,
   ) {}
 
-  async createAppointment(body: any) {
-    const doctor =
-      await this.doctorRepository.findOne({
-        where: { id: body.doctorId },
+   async createAppointment(body: any) {
+  const doctor =
+    await this.doctorRepository.findOne({
+      where: { id: body.doctorId },
+    });
+
+  if (!doctor) {
+    throw new NotFoundException(
+      'Doctor not found',
+    );
+  }
+
+  const patient =
+    await this.patientRepository.findOne({
+      where: { id: body.patientId },
+    });
+
+  if (!patient) {
+    throw new NotFoundException(
+      'Patient not found',
+    );
+  }
+
+  const appointmentDate =
+    new Date(body.appointmentDate);
+
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  if (appointmentDate < today) {
+    throw new BadRequestException(
+      'Past appointment not allowed',
+    );
+  }
+
+  let tokenNumber = 0;
+
+  if (
+    doctor.schedulingType?.toUpperCase() ===
+    'WAVE'
+  ) {
+    const bookedCount =
+      await this.appointmentRepository.count({
+        where: {
+          doctorId: body.doctorId,
+          appointmentDate:
+            body.appointmentDate,
+          status: AppointmentStatus.BOOKED,
+        },
       });
 
-    if (!doctor) {
-      throw new NotFoundException(
-        'Doctor not found',
-      );
-    }
-
-    const patient =
-      await this.patientRepository.findOne({
-        where: { id: body.patientId },
-      });
-
-    if (!patient) {
-      throw new NotFoundException(
-        'Patient not found',
-      );
-    }
-
-    const appointmentDate =
-      new Date(body.appointmentDate);
-
-    const today = new Date();
-
-    today.setHours(0, 0, 0, 0);
-
-    if (appointmentDate < today) {
+    if (
+      bookedCount >= doctor.maxCapacity
+    ) {
       throw new BadRequestException(
-        'Past appointment not allowed',
+        'Wave is full',
       );
     }
 
+    tokenNumber = bookedCount + 1;
+  } else {
     const duplicate =
       await this.appointmentRepository.findOne({
         where: {
@@ -72,6 +98,7 @@ export class AppointmentService {
             body.appointmentDate,
           startTime: body.startTime,
           endTime: body.endTime,
+          status: AppointmentStatus.BOOKED,
         },
       });
 
@@ -80,18 +107,19 @@ export class AppointmentService {
         'Slot already booked',
       );
     }
-
-    const appointment =
-      this.appointmentRepository.create({
-        ...body,
-        status: AppointmentStatus.BOOKED,
-      });
-
-    return await this.appointmentRepository.save(
-      appointment,
-    );
   }
 
+  const appointment =
+    this.appointmentRepository.create({
+      ...body,
+      tokenNumber,
+      status: AppointmentStatus.BOOKED,
+    });
+
+  return await this.appointmentRepository.save(
+    appointment,
+  );
+}
   async getMyAppointments(
     patientId: number,
   ) {
