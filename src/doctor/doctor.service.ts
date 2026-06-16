@@ -448,7 +448,7 @@ if (availableSlots.length === 0) {
 
 return availableSlots;
 }
-async updateSchedulingType(
+ async updateSchedulingType(
   doctorId: number,
   body: any,
 ) {
@@ -461,6 +461,50 @@ async updateSchedulingType(
     throw new NotFoundException(
       'Doctor not found',
     );
+  }
+
+  if (
+    body.schedulingType !== 'STREAM' &&
+    body.schedulingType !== 'WAVE'
+  ) {
+    throw new BadRequestException(
+      'Invalid scheduling type',
+    );
+  }
+
+  if (
+    body.schedulingType === 'STREAM'
+  ) {
+    if (
+      !body.slotDuration ||
+      body.slotDuration <= 0
+    ) {
+      throw new BadRequestException(
+        'Invalid slot duration',
+      );
+    }
+
+    if (
+      body.bufferTime === undefined ||
+      body.bufferTime < 0
+    ) {
+      throw new BadRequestException(
+        'Invalid buffer time',
+      );
+    }
+  }
+
+  if (
+    body.schedulingType === 'WAVE'
+  ) {
+    if (
+      !body.maxCapacity ||
+      body.maxCapacity <= 0
+    ) {
+      throw new BadRequestException(
+        'Invalid capacity',
+      );
+    }
   }
 
   await this.doctorRepository.update(
