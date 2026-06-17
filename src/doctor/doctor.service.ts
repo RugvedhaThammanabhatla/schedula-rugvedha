@@ -298,6 +298,11 @@ async getDoctorSlots(
   if (!doctor) {
     throw new NotFoundException('Doctor not found');
   }
+  if (doctor.schedulingType !== 'STREAM') {
+  throw new BadRequestException(
+    'Doctor is not using STREAM scheduling',
+  );
+}
 
   if (!date) {
     throw new BadRequestException('Date is required');
@@ -531,6 +536,24 @@ async getWaveAvailability(
       'Doctor not found',
     );
   }
+  if (doctor.schedulingType !== 'WAVE') {
+  throw new BadRequestException(
+    'Doctor is not using WAVE scheduling',
+  );
+}
+if (!date) {
+  throw new BadRequestException(
+    'Date is required',
+  );
+}
+
+const selectedDate = new Date(date);
+
+if (isNaN(selectedDate.getTime())) {
+  throw new BadRequestException(
+    'Invalid date',
+  );
+}
 
   const booked =
     await this.appointmentRepository.count({
