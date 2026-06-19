@@ -35,4 +35,8 @@ export class Appointment {
     default: AppointmentStatus.BOOKED,
   })
   status: AppointmentStatus;
+@Column({
+  nullable: true,
+})
+tokenNumber!: number;
 }

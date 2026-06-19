@@ -415,9 +415,11 @@ async getDoctorSlots(
         });
       }
 
-             start.setMinutes(
-        start.getMinutes() + slotDuration,
-      );
+           start.setMinutes(
+  start.getMinutes() +
+    slotDuration +
+    (doctor.bufferTime || 0),
+);   
     }
   }
 
@@ -445,5 +447,61 @@ if (availableSlots.length === 0) {
 }
 
 return availableSlots;
+}
+async updateSchedulingType(
+  doctorId: number,
+  body: any,
+) {
+  const doctor =
+    await this.doctorRepository.findOne({
+      where: { id: doctorId },
+    });
+
+  if (!doctor) {
+    throw new NotFoundException(
+      'Doctor not found',
+    );
+  }
+
+  await this.doctorRepository.update(
+    doctorId,
+    body,
+  );
+
+  return {
+    message:
+      'Scheduling type updated successfully',
+  };
+}
+async getWaveAvailability(
+  doctorId: number,
+  date: string,
+) {
+  const doctor =
+    await this.doctorRepository.findOne({
+      where: { id: doctorId },
+    });
+
+  if (!doctor) {
+    throw new NotFoundException(
+      'Doctor not found',
+    );
+  }
+
+  const booked =
+    await this.appointmentRepository.count({
+      where: {
+        doctorId,
+        appointmentDate: date,
+      },
+    });
+
+  return {
+    schedulingType: 'WAVE',
+    capacity: doctor.maxCapacity,
+    booked,
+    available:
+      doctor.maxCapacity - booked,
+  };
 }
 }

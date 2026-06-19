@@ -83,6 +83,28 @@ getDoctorSlots(
     duration,
   );
 }
+@Patch(':id/scheduling-type')
+updateSchedulingType(
+  @Param('id') id: string,
+  @Body() body: any,
+) {
+  return this.doctorService.updateSchedulingType(
+    Number(id),
+    body,
+  );
+}
+@Get(':doctorId/wave')
+getWaveAvailability(
+  @Param('doctorId')
+  doctorId: string,
+  @Query('date')
+  date: string,
+) {
+  return this.doctorService.getWaveAvailability(
+    Number(doctorId),
+    date,
+  );
+}
 @Get(':id')
   getDoctorById(@Param('id') id: string) {
     return this.doctorService.getDoctorById(Number(id));

@@ -5,7 +5,7 @@ export class Doctor {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ name: 'full_name' })
+  @Column()
   fullName!: string;
 
   @Column()
@@ -14,9 +14,29 @@ export class Doctor {
   @Column()
   experience!: number;
 
-  @Column({ name: 'consultation_fee' })
+  @Column()
   consultationFee!: number;
 
   @Column()
   availability!: boolean;
+
+  @Column({
+    default: 'STREAM',
+  })
+  schedulingType!: string;
+
+  @Column({
+    nullable: true,
+  })
+  slotDuration!: number;
+
+  @Column({
+    default: 0,
+  })
+  bufferTime!: number;
+
+  @Column({
+    nullable: true,
+  })
+  maxCapacity!: number;
 }
