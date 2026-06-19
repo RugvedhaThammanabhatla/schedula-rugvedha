@@ -9,6 +9,10 @@ import { AuthModule } from './auth/auth.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { PatientModule } from './patient/patient.module';
 
+import { User } from './auth/user.entity';
+import { Doctor } from './doctor/doctor.entity';
+import { Patient } from './patient/patient.entity';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -18,8 +22,9 @@ import { PatientModule } from './patient/patient.module';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      autoLoadEntities: true,
+      entities: [User, Doctor, Patient],
       synchronize: true,
+      autoLoadEntities: true,
       ssl: {
         rejectUnauthorized: false,
       },
