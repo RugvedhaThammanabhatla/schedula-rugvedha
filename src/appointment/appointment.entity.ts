@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+} from 'typeorm';
+
+export enum AppointmentStatus {
+  BOOKED = 'BOOKED',
+  CANCELLED = 'CANCELLED',
+}
 
 @Entity('appointments')
 export class Appointment {
@@ -19,4 +28,11 @@ export class Appointment {
 
   @Column()
   endTime: string;
+
+  @Column({
+    type: 'enum',
+    enum: AppointmentStatus,
+    default: AppointmentStatus.BOOKED,
+  })
+  status: AppointmentStatus;
 }
