@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
+import { Appointment } from '../appointment/appointment.entity';
 
 @Injectable()
 export class DoctorService {
@@ -20,6 +21,10 @@ export class DoctorService {
 
   @InjectRepository(CustomAvailability)
   private customRepository: Repository<CustomAvailability>,
+
+  @InjectRepository(Appointment)
+  private appointmentRepository:
+  Repository<Appointment>,
 ) {}
   async getDoctors(
     specialization?: string,
@@ -280,5 +285,165 @@ async getAvailabilityByDate(date: string) {
   return {
     message: 'No custom availability found for this date',
   };
+}
+async getDoctorSlots(
+  doctorId: number,
+  date: string,
+  duration: string = '15',
+) {
+  const doctor = await this.doctorRepository.findOne({
+    where: { id: doctorId },
+  });
+
+  if (!doctor) {
+    throw new NotFoundException('Doctor not found');
+  }
+
+  if (!date) {
+    throw new BadRequestException('Date is required');
+  }
+
+  const slotDuration = Number(duration);
+
+  if (
+    isNaN(slotDuration) ||
+    slotDuration <= 0
+  ) {
+    throw new BadRequestException(
+      'Invalid slot duration',
+    );
+  }
+
+  const selectedDate = new Date(date);
+
+  if (isNaN(selectedDate.getTime())) {
+    throw new BadRequestException(
+      'Invalid date',
+    );
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (selectedDate < today) {
+    throw new BadRequestException(
+      'Past date not allowed',
+    );
+  }
+
+  let availability: any[] = [];
+
+  const customAvailability =
+    await this.customRepository.find({
+      where: {
+        doctorId,
+        date,
+      },
+    });
+
+  if (customAvailability.length > 0) {
+    availability = customAvailability;
+  } else {
+    const dayOfWeek =
+      selectedDate.toLocaleDateString(
+        'en-US',
+        { weekday: 'long' },
+      );
+
+    availability =
+      await this.recurringRepository.find({
+        where: {
+          doctorId,
+          dayOfWeek,
+        },
+      });
+  }
+
+  if (availability.length === 0) {
+    throw new NotFoundException(
+      'No availability found',
+    );
+  }
+
+  const slots: any[] = [];
+
+  for (const item of availability) {
+    const [startHour, startMinute] =
+      item.startTime
+        .split(':')
+        .map(Number);
+
+    const [endHour, endMinute] =
+      item.endTime
+        .split(':')
+        .map(Number);
+
+    const start = new Date(selectedDate);
+    start.setHours(
+      startHour,
+      startMinute,
+      0,
+      0,
+    );
+
+    const end = new Date(selectedDate);
+    end.setHours(
+      endHour,
+      endMinute,
+      0,
+      0,
+    );
+
+    while (start < end) {
+      const slotEnd = new Date(
+        start.getTime() +
+          slotDuration * 60000,
+      );
+
+      if (slotEnd > end) {
+        break;
+      }
+
+      if (slotEnd > new Date()) {
+        slots.push({
+          startTime: start
+            .toTimeString()
+            .slice(0, 5),
+          endTime: slotEnd
+            .toTimeString()
+            .slice(0, 5),
+        });
+      }
+
+             start.setMinutes(
+        start.getMinutes() + slotDuration,
+      );
+    }
+  }
+
+   const bookedAppointments =
+  await this.appointmentRepository.find({
+    where: {
+      doctorId,
+      appointmentDate: date,
+    },
+  });
+
+const availableSlots = slots.filter(
+  (slot) =>
+    !bookedAppointments.some(
+      (booking) =>
+        booking.startTime === slot.startTime &&
+        booking.endTime === slot.endTime,
+    ),
+);
+
+if (availableSlots.length === 0) {
+  throw new NotFoundException(
+    'No slots available',
+  );
+}
+
+return availableSlots;
 }
 }

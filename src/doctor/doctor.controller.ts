@@ -71,7 +71,19 @@ export class DoctorController {
     return this.doctorService.getAvailabilityByDate(date);
   }
 
-  @Get(':id')
+  @Get(':doctorId/slots')
+getDoctorSlots(
+  @Param('doctorId') doctorId: string,
+  @Query('date') date: string,
+  @Query('duration') duration?: string,
+) {
+  return this.doctorService.getDoctorSlots(
+    Number(doctorId),
+    date,
+    duration,
+  );
+}
+@Get(':id')
   getDoctorById(@Param('id') id: string) {
     return this.doctorService.getDoctorById(Number(id));
   }
