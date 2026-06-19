@@ -298,6 +298,11 @@ async getDoctorSlots(
   if (!doctor) {
     throw new NotFoundException('Doctor not found');
   }
+  if (doctor.schedulingType !== 'STREAM') {
+  throw new BadRequestException(
+    'Doctor is not using STREAM scheduling',
+  );
+}
 
   if (!date) {
     throw new BadRequestException('Date is required');
@@ -448,7 +453,7 @@ if (availableSlots.length === 0) {
 
 return availableSlots;
 }
-async updateSchedulingType(
+ async updateSchedulingType(
   doctorId: number,
   body: any,
 ) {
@@ -461,6 +466,50 @@ async updateSchedulingType(
     throw new NotFoundException(
       'Doctor not found',
     );
+  }
+
+  if (
+    body.schedulingType !== 'STREAM' &&
+    body.schedulingType !== 'WAVE'
+  ) {
+    throw new BadRequestException(
+      'Invalid scheduling type',
+    );
+  }
+
+  if (
+    body.schedulingType === 'STREAM'
+  ) {
+    if (
+      !body.slotDuration ||
+      body.slotDuration <= 0
+    ) {
+      throw new BadRequestException(
+        'Invalid slot duration',
+      );
+    }
+
+    if (
+      body.bufferTime === undefined ||
+      body.bufferTime < 0
+    ) {
+      throw new BadRequestException(
+        'Invalid buffer time',
+      );
+    }
+  }
+
+  if (
+    body.schedulingType === 'WAVE'
+  ) {
+    if (
+      !body.maxCapacity ||
+      body.maxCapacity <= 0
+    ) {
+      throw new BadRequestException(
+        'Invalid capacity',
+      );
+    }
   }
 
   await this.doctorRepository.update(
@@ -487,6 +536,24 @@ async getWaveAvailability(
       'Doctor not found',
     );
   }
+  if (doctor.schedulingType !== 'WAVE') {
+  throw new BadRequestException(
+    'Doctor is not using WAVE scheduling',
+  );
+}
+if (!date) {
+  throw new BadRequestException(
+    'Date is required',
+  );
+}
+
+const selectedDate = new Date(date);
+
+if (isNaN(selectedDate.getTime())) {
+  throw new BadRequestException(
+    'Invalid date',
+  );
+}
 
   const booked =
     await this.appointmentRepository.count({

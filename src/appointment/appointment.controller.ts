@@ -54,4 +54,16 @@ export class AppointmentController {
       Number(doctorId),
     );
   }
+  @Patch(':id/reschedule')
+rescheduleAppointment(
+  @Param('id') id: string,
+  @Body() body: any,
+) {
+  return this.appointmentService
+    .rescheduleAppointment(
+      Number(id),
+      body.patientId,
+      body,
+    );
+}
 }
