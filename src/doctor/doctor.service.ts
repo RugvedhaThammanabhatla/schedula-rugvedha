@@ -602,10 +602,20 @@ query.andWhere(
 );
 
 if(date){
+
+const selectedDate = new Date(date);
+
+if(isNaN(selectedDate.getTime())){
+throw new BadRequestException(
+'Invalid date',
+);
+}
+
 query.andWhere(
 'appointment.appointmentDate=:date',
 {date},
 );
+
 }
 
 const appointments =
@@ -617,13 +627,45 @@ throw new NotFoundException(
 );
 }
 
-return appointments;
+return {
+  message: 'Appointments fetched successfully',
+
+  count: appointments.length,
+
+  data: appointments.map((appointment) => ({
+    id: appointment.id,
+
+    patient: {
+      id: appointment.patientId,
+    },
+
+    appointmentDate:
+      appointment.appointmentDate,
+
+    startTime:
+      appointment.startTime,
+
+    endTime:
+      appointment.endTime,
+
+    status:
+      appointment.status,
+
+    schedulingType:
+      doctor.schedulingType,
+  })),
+};
 
 }
 async cancelDoctorAppointment(
 doctorId:number,
 appointmentId:number,
 ){
+  if(isNaN(appointmentId)){
+throw new BadRequestException(
+'Invalid appointment ID',
+);
+}
 
 const doctor =
 await this.doctorRepository.findOne({
