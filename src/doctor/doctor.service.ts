@@ -352,9 +352,9 @@ async getDoctorSlots(
     const dayOfWeek =
       selectedDate.toLocaleDateString(
         'en-US',
-        { weekday: 'long' },
-      );
-
+        { weekday: 'long' }
+      )
+.toUpperCase();
     availability =
       await this.recurringRepository.find({
         where: {
