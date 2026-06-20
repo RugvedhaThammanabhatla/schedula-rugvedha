@@ -6,7 +6,7 @@ Project Setup
 
 Clone the repository:
 
-git clone https://github.com/RugvedhaThammanabhatla/schedula-rugvedha.git
+git clone https://github.com/RugvedhaThammanabhatla/schedula-rugvedha
 cd schedula-rugvedha
 
 Install dependencies:
