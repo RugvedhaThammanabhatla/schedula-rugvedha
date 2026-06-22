@@ -39,6 +39,7 @@ private customRepository:
 Repository<CustomAvailability>,
   ) {}
 async createAppointment(body: any) {
+  console.log("PatientId:", body.patientId);
 
   const doctor =
     await this.doctorRepository.findOne({
@@ -70,6 +71,30 @@ async createAppointment(body: any) {
         id: body.patientId,
       },
     });
+    if (!patient) {
+
+throw new NotFoundException(
+
+'Patient not found',
+
+);
+
+}
+
+
+if (
+
+patient.role !== 'PATIENT'
+
+) {
+
+throw new BadRequestException(
+
+'Only patients can book appointments',
+
+);
+
+}
 
   if (!patient) {
     throw new NotFoundException(

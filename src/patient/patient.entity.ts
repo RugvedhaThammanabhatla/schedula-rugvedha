@@ -3,14 +3,19 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 @Entity()
 export class Patient {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  fullName: string;
+  fullName!: string;
 
   @Column()
-  age: number;
+  age!: number;
 
   @Column()
-  gender: string;
+  gender!: string;
+
+  @Column({
+default:'PATIENT'
+})
+role!:string;
 }
