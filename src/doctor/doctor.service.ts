@@ -8,7 +8,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Doctor } from './doctor.entity';
-import { Appointment } from '../appointment/appointment.entity';
+import { Appointment,AppointmentStatus,
+} from '../appointment/appointment.entity';
 
 @Injectable()
 export class DoctorService {
@@ -570,5 +571,158 @@ if (isNaN(selectedDate.getTime())) {
     available:
       doctor.maxCapacity - booked,
   };
+}
+async getDoctorAppointments(
+  doctorId: number,
+  date?: string,
+) {
+
+const doctor = await this.doctorRepository.findOne({
+where:{id:doctorId},
+});
+
+if(!doctor){
+throw new NotFoundException(
+'Doctor not found',
+);
+}
+
+const query =
+this.appointmentRepository.createQueryBuilder(
+'appointment',
+);
+
+query.where(
+'appointment.doctorId=:doctorId',
+{doctorId},
+);
+
+query.andWhere(
+"appointment.status != 'CANCELLED'",
+);
+
+if(date){
+
+const selectedDate = new Date(date);
+
+if(isNaN(selectedDate.getTime())){
+throw new BadRequestException(
+'Invalid date',
+);
+}
+
+query.andWhere(
+'appointment.appointmentDate=:date',
+{date},
+);
+
+}
+
+const appointments =
+await query.getMany();
+
+if(appointments.length===0){
+throw new NotFoundException(
+'No appointments found',
+);
+}
+
+return {
+  message: 'Appointments fetched successfully',
+
+  count: appointments.length,
+
+  data: appointments.map((appointment) => ({
+    id: appointment.id,
+
+    patient: {
+      id: appointment.patientId,
+    },
+
+    appointmentDate:
+      appointment.appointmentDate,
+
+    startTime:
+      appointment.startTime,
+
+    endTime:
+      appointment.endTime,
+
+    status:
+      appointment.status,
+
+    schedulingType:
+      doctor.schedulingType,
+  })),
+};
+
+}
+async cancelDoctorAppointment(
+doctorId:number,
+appointmentId:number,
+){
+  if(isNaN(appointmentId)){
+throw new BadRequestException(
+'Invalid appointment ID',
+);
+}
+
+const doctor =
+await this.doctorRepository.findOne({
+where:{id:doctorId},
+});
+
+if(!doctor){
+throw new NotFoundException(
+'Doctor not found',
+);
+}
+
+const appointment =
+await this.appointmentRepository.findOne({
+where:{
+id:appointmentId,
+},
+});
+
+if(!appointment){
+throw new NotFoundException(
+'Appointment not found',
+);
+}
+
+if(
+appointment.doctorId!==doctorId
+){
+throw new BadRequestException(
+'Unauthorized access',
+);
+}
+
+if(
+appointment.status==='CANCELLED'
+){
+throw new BadRequestException(
+'Appointment already cancelled',
+);
+}
+
+
+appointment.status=
+AppointmentStatus.CANCELLED;
+
+await this.appointmentRepository.save(
+appointment,
+);
+
+return{
+
+message:
+'Appointment cancelled successfully',
+
+appointment,
+
+};
+
 }
 }

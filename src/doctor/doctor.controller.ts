@@ -70,7 +70,50 @@ export class DoctorController {
   ) {
     return this.doctorService.getAvailabilityByDate(date);
   }
+@Get('appointments')
 
+getDoctorAppointments(
+
+@Query('doctorId')
+doctorId:string,
+
+@Query('date')
+date?:string,
+
+){
+
+return this.doctorService.getDoctorAppointments(
+
+Number(doctorId),
+
+date,
+
+);
+
+}
+@Patch(
+'appointments/:id/cancel',
+)
+
+cancelDoctorAppointment(
+
+@Param('id')
+id:string,
+
+@Query('doctorId')
+doctorId:string,
+
+){
+
+return this.doctorService.cancelDoctorAppointment(
+
+Number(doctorId),
+
+Number(id),
+
+);
+
+}
   @Get(':doctorId/slots')
 getDoctorSlots(
   @Param('doctorId') doctorId: string,
