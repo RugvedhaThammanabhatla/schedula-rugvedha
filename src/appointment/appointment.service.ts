@@ -39,7 +39,6 @@ private customRepository:
 Repository<CustomAvailability>,
   ) {}
 async createAppointment(body: any) {
-  console.log("PatientId:", body.patientId);
 
   const doctor =
     await this.doctorRepository.findOne({
@@ -71,30 +70,6 @@ async createAppointment(body: any) {
         id: body.patientId,
       },
     });
-    if (!patient) {
-
-throw new NotFoundException(
-
-'Patient not found',
-
-);
-
-}
-
-
-if (
-
-patient.role !== 'PATIENT'
-
-) {
-
-throw new BadRequestException(
-
-'Only patients can book appointments',
-
-);
-
-}
 
   if (!patient) {
     throw new NotFoundException(
@@ -352,7 +327,6 @@ throw new BadRequestException(
         id: appointmentId,
       },
     });
-
   if (!appointment) {
     throw new NotFoundException(
       'Appointment not found',
@@ -456,7 +430,11 @@ throw new BadRequestException(
       'Doctor not found',
     );
   }
-
+if (!doctor.availability) {
+  throw new BadRequestException(
+    'Doctor unavailable',
+  );
+}
   if (
     doctor.schedulingType
       ?.toUpperCase() ===
@@ -638,5 +616,460 @@ throw new BadRequestException(
   },
 
 };
+}
+async findNextAvailableSlot(
+doctorId:number
+){
+
+if(isNaN(doctorId)){
+throw new BadRequestException(
+'Invalid doctor ID'
+);
+}
+
+
+const doctor=
+await this.doctorRepository.findOne({
+
+where:{id:doctorId}
+
+});
+
+
+if(!doctor){
+throw new NotFoundException(
+'Doctor not found'
+);
+}
+
+
+if(!doctor.availability){
+throw new BadRequestException(
+'Doctor unavailable'
+);
+}
+
+
+if(
+
+doctor.schedulingType?.toUpperCase()!=='STREAM'
+
+&&
+
+doctor.schedulingType?.toUpperCase()!=='WAVE'
+
+){
+
+throw new BadRequestException(
+'Invalid scheduling type'
+);
+
+}
+
+
+
+for(let i=0;i<30;i++){
+
+
+const currentDate=new Date();
+
+currentDate.setDate(
+
+currentDate.getDate()+i
+
+);
+
+
+
+const date=
+
+currentDate
+
+.toISOString()
+
+.split('T')[0];
+
+
+
+/* CUSTOM */
+
+
+const customSlots=
+
+await this.customRepository.find({
+
+where:{
+
+doctorId,
+
+date
+
+}
+
+});
+
+
+if(customSlots.length>0){
+
+
+if(
+
+doctor.schedulingType?.toUpperCase()
+
+==='WAVE'
+
+){
+
+
+const count=
+
+await this.appointmentRepository.count({
+
+where:{
+
+doctorId,
+
+appointmentDate:date,
+
+status:
+AppointmentStatus.BOOKED
+
+}
+
+});
+
+
+if(
+
+count<doctor.maxCapacity!
+
+){
+
+return{
+
+
+doctorId,
+
+
+nextAvailableDate:
+date,
+
+
+schedulingType:
+doctor.schedulingType,
+
+
+availabilityType:
+'CUSTOM',
+
+
+bookingAllowed:
+true,
+
+
+slots:
+customSlots
+
+
+};
+
+}
+
+}
+
+
+else{
+
+
+for(const slot of customSlots){
+
+
+const booked=
+
+await this.appointmentRepository.findOne({
+
+where:{
+
+
+doctorId,
+
+
+appointmentDate:date,
+
+
+startTime:
+slot.startTime,
+
+
+endTime:
+slot.endTime,
+
+
+status:
+AppointmentStatus.BOOKED
+
+
+}
+
+});
+
+
+if(!booked){
+
+
+return{
+
+
+doctorId,
+
+
+nextAvailableDate:
+date,
+
+
+schedulingType:
+doctor.schedulingType,
+
+
+availabilityType:
+'CUSTOM',
+
+
+bookingAllowed:
+true,
+
+
+slots:
+customSlots
+
+
+};
+
+
+}
+
+
+}
+
+
+}
+
+
+}
+
+
+
+
+/* RECURRING */
+
+
+const dayOfWeek=
+
+currentDate
+
+.toLocaleDateString(
+
+'en-US',
+
+{
+
+weekday:'long'
+
+}
+
+)
+
+.toUpperCase();
+
+
+
+
+const recurringSlots=
+
+await this.recurringRepository.find({
+
+where:{
+
+
+doctorId,
+
+
+dayOfWeek
+
+
+}
+
+});
+
+
+
+if(recurringSlots.length>0){
+
+
+if(
+
+doctor.schedulingType?.toUpperCase()
+
+==='WAVE'
+
+){
+
+
+const count=
+
+await this.appointmentRepository.count({
+
+where:{
+
+
+doctorId,
+
+
+appointmentDate:date,
+
+
+status:
+AppointmentStatus.BOOKED
+
+
+}
+
+});
+
+
+
+if(
+
+count<doctor.maxCapacity!
+
+){
+
+return{
+
+
+doctorId,
+
+
+nextAvailableDate:
+date,
+
+
+schedulingType:
+doctor.schedulingType,
+
+
+availabilityType:
+'RECURRING',
+
+
+bookingAllowed:
+true,
+
+
+slots:
+recurringSlots
+
+
+};
+
+
+}
+
+}
+
+
+
+else{
+
+
+for(const slot of recurringSlots){
+
+
+const booked=
+
+await this.appointmentRepository.findOne({
+
+where:{
+
+
+doctorId,
+
+
+appointmentDate:date,
+
+
+startTime:
+slot.startTime,
+
+
+endTime:
+slot.endTime,
+
+
+status:
+AppointmentStatus.BOOKED
+
+
+}
+
+});
+
+
+
+if(!booked){
+
+
+return{
+
+
+doctorId,
+
+
+nextAvailableDate:
+date,
+
+
+schedulingType:
+doctor.schedulingType,
+
+
+availabilityType:
+'RECURRING',
+
+
+bookingAllowed:
+true,
+
+
+slots:
+recurringSlots
+
+
+};
+
+
+}
+
+
+}
+
+
+}
+
+
+}
+
+
+}
+
+
+
+throw new NotFoundException(
+
+'No appointments available in next 30 working days. Please try again later.'
+
+);
+
+
 }
 }

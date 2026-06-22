@@ -34,7 +34,7 @@ export class AppointmentController {
     @Req() req: any,
     @Body() body: CreateAppointmentDto,
   ) {
-console.log(req.user);
+
     body.patientId = req.user.userId;
 
     return this.appointmentService.createAppointment(
@@ -139,6 +139,29 @@ console.log(req.user);
       req.user.userId,
 
       body,
+
+    );
+
+  }
+
+
+  // ======================
+  // Next Available Slot
+  // ======================
+
+ @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('PATIENT')
+@Get('next-available/:doctorId')
+  findNextAvailableSlot(
+
+    @Param('doctorId')
+    doctorId: string,
+
+  ) {
+
+    return this.appointmentService.findNextAvailableSlot(
+
+      Number(doctorId),
 
     );
 
