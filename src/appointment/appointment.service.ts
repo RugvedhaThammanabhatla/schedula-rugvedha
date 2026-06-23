@@ -617,459 +617,391 @@ throw new BadRequestException(
 
 };
 }
-async findNextAvailableSlot(
-doctorId:number
-){
+async findNextAvailableSlot(doctorId: number) {
 
-if(isNaN(doctorId)){
-throw new BadRequestException(
-'Invalid doctor ID'
-);
-}
+  if (isNaN(doctorId)) {
+    throw new BadRequestException(
+      'Invalid doctor ID',
+    );
+  }
 
+  const doctor = await this.doctorRepository.findOne({
+    where: { id: doctorId },
+  });
 
-const doctor=
-await this.doctorRepository.findOne({
+  if (!doctor) {
+    throw new NotFoundException(
+      'Doctor not found',
+    );
+  }
 
-where:{id:doctorId}
+  if (!doctor.availability) {
+    throw new BadRequestException(
+      'Doctor unavailable',
+    );
+  }
 
-});
+  if (
+    doctor.schedulingType?.toUpperCase() !== 'STREAM' &&
+    doctor.schedulingType?.toUpperCase() !== 'WAVE'
+  ) {
+    throw new BadRequestException(
+      'Invalid scheduling type',
+    );
+  }
 
 
-if(!doctor){
-throw new NotFoundException(
-'Doctor not found'
-);
-}
+  const SEARCH_WINDOW = 3;
 
 
-if(!doctor.availability){
-throw new BadRequestException(
-'Doctor unavailable'
-);
-}
+  for (let i = 0; i <= SEARCH_WINDOW; i++) {
 
 
-if(
+    const currentDate = new Date();
 
-doctor.schedulingType?.toUpperCase()!=='STREAM'
+    currentDate.setDate(
+      currentDate.getDate() + i,
+    );
 
-&&
+    const date =
+      currentDate
+        .toISOString()
+        .split('T')[0];
 
-doctor.schedulingType?.toUpperCase()!=='WAVE'
 
-){
 
-throw new BadRequestException(
-'Invalid scheduling type'
-);
+    /* CUSTOM AVAILABILITY */
 
-}
+    const customSlots =
+      await this.customRepository.find({
 
+        where: {
+          doctorId,
+          date,
+        },
 
+      });
 
-for(let i=0;i<30;i++){
 
 
-const currentDate=new Date();
+    if (customSlots.length > 0) {
 
-currentDate.setDate(
 
-currentDate.getDate()+i
+      if (
+        doctor.schedulingType?.toUpperCase() ===
+        'WAVE'
+      ) {
 
-);
+        for (const slot of customSlots) {
 
+          const count =
+            await this.appointmentRepository.count({
 
+              where: {
 
-const date=
+                doctorId,
 
-currentDate
+                appointmentDate: date,
 
-.toISOString()
+                startTime: slot.startTime,
 
-.split('T')[0];
+                endTime: slot.endTime,
 
+                status:
+                  AppointmentStatus.BOOKED,
 
+              },
 
-/* CUSTOM */
+            });
 
 
-const customSlots=
 
-await this.customRepository.find({
+          if (
+            count <
+            doctor.maxCapacity!
+          ) {
 
-where:{
+            return {
 
-doctorId,
+              doctorId,
 
-date
+              nextAvailableDate:
+                date,
 
-}
+              schedulingType:
+                doctor.schedulingType,
 
-});
+              availabilityType:
+                'CUSTOM',
 
+              bookingAllowed:
+                true,
 
-if(customSlots.length>0){
+              slots: [slot],
 
+            };
 
-if(
+          }
 
-doctor.schedulingType?.toUpperCase()
+        }
 
-==='WAVE'
+      }
 
-){
 
+      else {
 
-const count=
 
-await this.appointmentRepository.count({
+        for (const slot of customSlots) {
 
-where:{
 
-doctorId,
+          const booked =
+            await this.appointmentRepository.findOne({
 
-appointmentDate:date,
+              where: {
 
-status:
-AppointmentStatus.BOOKED
+                doctorId,
 
-}
+                appointmentDate:
+                  date,
 
-});
+                startTime:
+                  slot.startTime,
 
+                endTime:
+                  slot.endTime,
 
-if(
+                status:
+                  AppointmentStatus.BOOKED,
 
-count<doctor.maxCapacity!
+              },
 
-){
+            });
 
-return{
 
 
-doctorId,
+          if (!booked) {
 
 
-nextAvailableDate:
-date,
+            return {
 
+              doctorId,
 
-schedulingType:
-doctor.schedulingType,
+              nextAvailableDate:
+                date,
 
+              schedulingType:
+                doctor.schedulingType,
 
-availabilityType:
-'CUSTOM',
+              availabilityType:
+                'CUSTOM',
 
+              bookingAllowed:
+                true,
 
-bookingAllowed:
-true,
+              slots: [slot],
 
+            };
 
-slots:
-customSlots
+          }
 
+        }
 
-};
+      }
 
-}
+    }
 
-}
 
 
-else{
+    /* RECURRING AVAILABILITY */
 
+    const dayOfWeek =
 
-for(const slot of customSlots){
+      currentDate
+        .toLocaleDateString(
 
+          'en-US',
 
-const booked=
+          {
+            weekday: 'long',
+          },
 
-await this.appointmentRepository.findOne({
+        )
+        .toUpperCase();
 
-where:{
 
 
-doctorId,
+    const recurringSlots =
 
+      await this.recurringRepository.find({
 
-appointmentDate:date,
+        where: {
 
+          doctorId,
 
-startTime:
-slot.startTime,
+          dayOfWeek,
 
+        },
 
-endTime:
-slot.endTime,
+      });
 
 
-status:
-AppointmentStatus.BOOKED
 
+    /* WEEKLY OFF */
 
-}
+    if (
+      customSlots.length === 0 &&
+      recurringSlots.length === 0
+    ) {
 
-});
+      continue;
 
+    }
 
-if(!booked){
 
 
-return{
+    if (recurringSlots.length > 0) {
 
 
-doctorId,
+      if (
+        doctor.schedulingType?.toUpperCase() ===
+        'WAVE'
+      ) {
 
 
-nextAvailableDate:
-date,
+        for (const slot of recurringSlots) {
 
 
-schedulingType:
-doctor.schedulingType,
+          const count =
 
+            await this.appointmentRepository.count({
 
-availabilityType:
-'CUSTOM',
+              where: {
 
+                doctorId,
 
-bookingAllowed:
-true,
+                appointmentDate:
+                  date,
 
+                startTime:
+                  slot.startTime,
 
-slots:
-customSlots
+                endTime:
+                  slot.endTime,
 
+                status:
+                  AppointmentStatus.BOOKED,
 
-};
+              },
 
+            });
 
-}
 
 
-}
+          if (
+            count <
+            doctor.maxCapacity!
+          ) {
 
 
-}
+            return {
 
+              doctorId,
 
-}
+              nextAvailableDate:
+                date,
 
+              schedulingType:
+                doctor.schedulingType,
 
+              availabilityType:
+                'RECURRING',
 
+              bookingAllowed:
+                true,
 
-/* RECURRING */
+              slots: [slot],
 
+            };
 
-const dayOfWeek=
+          }
 
-currentDate
+        }
 
-.toLocaleDateString(
+      }
 
-'en-US',
 
-{
 
-weekday:'long'
+      else {
 
-}
 
-)
+        for (const slot of recurringSlots) {
 
-.toUpperCase();
 
+          const booked =
 
+            await this.appointmentRepository.findOne({
 
+              where: {
 
-const recurringSlots=
+                doctorId,
 
-await this.recurringRepository.find({
+                appointmentDate:
+                  date,
 
-where:{
+                startTime:
+                  slot.startTime,
 
+                endTime:
+                  slot.endTime,
 
-doctorId,
+                status:
+                  AppointmentStatus.BOOKED,
 
+              },
 
-dayOfWeek
+            });
 
 
-}
 
-});
+          if (!booked) {
 
 
+            return {
 
-if(recurringSlots.length>0){
+              doctorId,
 
+              nextAvailableDate:
+                date,
 
-if(
+              schedulingType:
+                doctor.schedulingType,
 
-doctor.schedulingType?.toUpperCase()
+              availabilityType:
+                'RECURRING',
 
-==='WAVE'
+              bookingAllowed:
+                true,
 
-){
+              slots: [slot],
 
+            };
 
-const count=
+          }
 
-await this.appointmentRepository.count({
+        }
 
-where:{
+      }
 
+    }
 
-doctorId,
+  }
 
 
-appointmentDate:date,
+  throw new NotFoundException(
 
+    'No appointments available within the next 3 working days. Please try again later.'
 
-status:
-AppointmentStatus.BOOKED
-
-
-}
-
-});
-
-
-
-if(
-
-count<doctor.maxCapacity!
-
-){
-
-return{
-
-
-doctorId,
-
-
-nextAvailableDate:
-date,
-
-
-schedulingType:
-doctor.schedulingType,
-
-
-availabilityType:
-'RECURRING',
-
-
-bookingAllowed:
-true,
-
-
-slots:
-recurringSlots
-
-
-};
-
-
-}
-
-}
-
-
-
-else{
-
-
-for(const slot of recurringSlots){
-
-
-const booked=
-
-await this.appointmentRepository.findOne({
-
-where:{
-
-
-doctorId,
-
-
-appointmentDate:date,
-
-
-startTime:
-slot.startTime,
-
-
-endTime:
-slot.endTime,
-
-
-status:
-AppointmentStatus.BOOKED
-
-
-}
-
-});
-
-
-
-if(!booked){
-
-
-return{
-
-
-doctorId,
-
-
-nextAvailableDate:
-date,
-
-
-schedulingType:
-doctor.schedulingType,
-
-
-availabilityType:
-'RECURRING',
-
-
-bookingAllowed:
-true,
-
-
-slots:
-recurringSlots
-
-
-};
-
-
-}
-
-
-}
-
-
-}
-
-
-}
-
-
-}
-
-
-
-throw new NotFoundException(
-
-'No appointments available in next 30 working days. Please try again later.'
-
-);
-
+  );
 
 }
 }
