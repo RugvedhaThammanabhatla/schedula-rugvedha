@@ -19,6 +19,12 @@ from '../doctor/recurring-availability.entity';
 
 import { CustomAvailability }
 from '../doctor/custom-availability.entity';
+
+import { NotificationService }
+from '../notification/notification.service';
+
+import { NotificationType }
+from '../notification/notification.enum';
 @Injectable()
 export class AppointmentService {
   constructor(
@@ -37,6 +43,8 @@ Repository<RecurringAvailability>,
 @InjectRepository(CustomAvailability)
 private customRepository:
 Repository<CustomAvailability>,
+private readonly notificationService:
+NotificationService,
   ) {}
 async createAppointment(body: any) {
 
@@ -201,25 +209,48 @@ async createAppointment(body: any) {
 
   const appointment =
 
-    this.appointmentRepository.create({
+this.appointmentRepository.create({
 
-      ...body,
+...body,
 
-      tokenNumber,
+tokenNumber,
 
-      status:
-        AppointmentStatus.BOOKED,
+status:
+AppointmentStatus.BOOKED,
 
-    });
-
-
+});
 
 
-  return await this.appointmentRepository.save(
 
-    appointment,
+const savedAppointment =
 
-  );
+await this.appointmentRepository.save(
+
+appointment,
+
+);
+
+
+
+await this.notificationService
+.createNotification(
+
+patient.id,
+
+'Appointment Booked',
+
+ `Your appointment with Dr. ${doctor.fullName}
+on ${body.appointmentDate}
+from ${body.startTime} to ${body.endTime}
+has been booked successfully.`,
+
+NotificationType.APPOINTMENT_BOOKED,
+
+);
+
+
+
+return savedAppointment;
 
 }
    
@@ -288,16 +319,41 @@ async createAppointment(body: any) {
     }
 
     appointment.status =
-      AppointmentStatus.CANCELLED;
+AppointmentStatus.CANCELLED;
 
-    await this.appointmentRepository.save(
-      appointment,
-    );
 
-    return {
-      message:
-        'Appointment cancelled successfully',
-    };
+await this.appointmentRepository.save(
+
+appointment,
+
+);
+
+
+await this.notificationService
+.createNotification(
+
+patientId,
+
+'Appointment Cancelled',
+
+ `Your appointment on
+${appointment.appointmentDate}
+from ${appointment.startTime}
+to ${appointment.endTime}
+has been cancelled successfully.`,
+
+NotificationType.APPOINTMENT_CANCELLED,
+
+);
+
+
+
+return {
+
+message:
+'Appointment cancelled successfully',
+
+};
   }
 
   async getDoctorAppointments(
@@ -597,25 +653,44 @@ throw new BadRequestException(
 
   );
 
-   return {
 
-  message:
-    'Appointment rescheduled successfully',
+await this.notificationService
+.createNotification(
 
-  releasedSlot:
-    oldSlot,
+patientId,
 
-  reservedSlot: {
+'Appointment Rescheduled',
 
-    appointmentDate,
+ `Your appointment has been rescheduled to ${appointmentDate} from ${startTime} to ${endTime}.`,
 
-    startTime,
+NotificationType.APPOINTMENT_RESCHEDULED,
 
-    endTime,
+);
 
-  },
+
+
+return {
+
+message:
+'Appointment rescheduled successfully',
+
+releasedSlot:
+oldSlot,
+
+reservedSlot:{
+
+appointmentDate,
+
+startTime,
+
+endTime,
+
+},
 
 };
+}
+private getFormattedDate(date: Date): string {
+  return date.toISOString().split('T')[0];
 }
 async findNextAvailableSlot(doctorId: number) {
 
@@ -651,10 +726,10 @@ async findNextAvailableSlot(doctorId: number) {
   }
 
 
-  const SEARCH_WINDOW = 3;
+  const SEARCH_WINDOW_DAYS = 3;
+const today = new Date();
 
-
-  for (let i = 0; i <= SEARCH_WINDOW; i++) {
+  for (let i = 0; i <= SEARCH_WINDOW_DAYS; i++) {
 
 
     const currentDate = new Date();
@@ -664,9 +739,9 @@ async findNextAvailableSlot(doctorId: number) {
     );
 
     const date =
-      currentDate
-        .toISOString()
-        .split('T')[0];
+  this.getFormattedDate(
+    currentDate,
+  );
 
 
 

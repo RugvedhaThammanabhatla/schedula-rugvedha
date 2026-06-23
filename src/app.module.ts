@@ -14,6 +14,7 @@ import { User } from './auth/user.entity';
 import { Doctor } from './doctor/doctor.entity';
 import { Patient } from './patient/patient.entity';
 import { Appointment } from './appointment/appointment.entity';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { Appointment } from './appointment/appointment.entity';
     DoctorModule,
     PatientModule,
     AppointmentModule,
+    NotificationModule,
   ],
 
   controllers: [AppController],
