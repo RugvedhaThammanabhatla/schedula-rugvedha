@@ -35,7 +35,21 @@ export class AppointmentController {
     @Body() body: CreateAppointmentDto,
   ) {
 
-    body.patientId = req.user.userId;
+    const payload = {
+
+...body,
+
+patientId:
+req.user.userId,
+
+};
+
+
+return this.appointmentService.createAppointment(
+
+payload,
+
+);
 
     return this.appointmentService.createAppointment(
       body,

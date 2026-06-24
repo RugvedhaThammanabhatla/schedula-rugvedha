@@ -232,17 +232,13 @@ appointment,
 
 
 
-await this.notificationService
-.createNotification(
+await this.notificationService.createNotification(
 
 patient.id,
 
 'Appointment Booked',
 
- `Your appointment with Dr. ${doctor.fullName}
-on ${body.appointmentDate}
-from ${body.startTime} to ${body.endTime}
-has been booked successfully.`,
+`Your appointment with Dr. ${doctor.fullName} on ${body.appointmentDate} from ${body.startTime} to ${body.endTime} has been booked successfully.`,
 
 NotificationType.APPOINTMENT_BOOKED,
 
@@ -336,11 +332,7 @@ patientId,
 
 'Appointment Cancelled',
 
- `Your appointment on
-${appointment.appointmentDate}
-from ${appointment.startTime}
-to ${appointment.endTime}
-has been cancelled successfully.`,
+`Your appointment scheduled on ${appointment.appointmentDate} from ${appointment.startTime} to ${appointment.endTime} has been cancelled successfully.`,
 
 NotificationType.APPOINTMENT_CANCELLED,
 
@@ -426,11 +418,18 @@ message:
     );
   }
 
-  const {
-    appointmentDate,
-    startTime,
-    endTime,
-  } = body;
+  // Validate request body
+if (!body) {
+  throw new BadRequestException(
+    'Request body is required',
+  );
+}
+
+const {
+  appointmentDate,
+  startTime,
+  endTime,
+} = body;
 
   if (
     appointment.appointmentDate ===
@@ -661,7 +660,7 @@ patientId,
 
 'Appointment Rescheduled',
 
- `Your appointment has been rescheduled to ${appointmentDate} from ${startTime} to ${endTime}.`,
+`Your appointment has been rescheduled to ${appointmentDate} from ${startTime} to ${endTime}.`,
 
 NotificationType.APPOINTMENT_RESCHEDULED,
 

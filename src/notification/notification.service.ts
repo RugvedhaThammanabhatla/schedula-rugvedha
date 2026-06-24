@@ -147,6 +147,7 @@ patientId:number,
 ){
 
 const result =
+
 await this.notificationRepository.update(
 
 {
@@ -166,15 +167,38 @@ isRead:true,
 );
 
 
-if ((result?.affected ?? 0) === 0) {
-    throw new NotFoundException(
-        'No unread notifications found',
-    );
+if(
+
+(result?.affected ?? 0)===0
+
+){
+
+throw new NotFoundException(
+
+'No unread notifications found',
+
+);
+
 }
+
+
+return{
+
+message:
+
+'All notifications marked as read',
+
+updatedCount:
+
+result.affected,
+
+};
 
 }
 async getUnreadCount(
+
 patientId:number,
+
 ){
 
 const count =
@@ -210,7 +234,25 @@ message:string,
 type:NotificationType,
 
 ){
+const existing =
+await this.notificationRepository.findOne({
 
+where:{
+
+patientId,
+
+message,
+
+type
+},
+
+});
+
+if(existing){
+
+return existing;
+
+}
 const notification =
 
 this.notificationRepository.create({
