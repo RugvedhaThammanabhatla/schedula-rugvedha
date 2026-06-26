@@ -15,7 +15,7 @@ import { Doctor } from './doctor/doctor.entity';
 import { Patient } from './patient/patient.entity';
 import { Appointment } from './appointment/appointment.entity';
 import { NotificationModule } from './notification/notification.module';
-
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,7 +37,7 @@ import { NotificationModule } from './notification/notification.module';
         rejectUnauthorized: false,
       },
     }),
-
+ScheduleModule.forRoot(),
     AuthModule,
     DoctorModule,
     PatientModule,
