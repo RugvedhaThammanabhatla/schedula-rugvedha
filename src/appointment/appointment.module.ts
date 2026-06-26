@@ -12,6 +12,8 @@ from '../doctor/recurring-availability.entity';
 
 import { CustomAvailability }
 from '../doctor/custom-availability.entity';
+import { NotificationModule }
+from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ from '../doctor/custom-availability.entity';
       RecurringAvailability,
       CustomAvailability
     ]),
+    NotificationModule,
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService],
