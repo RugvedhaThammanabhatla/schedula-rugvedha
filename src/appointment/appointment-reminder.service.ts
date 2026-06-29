@@ -7,9 +7,6 @@ import { Appointment, AppointmentStatus } from './appointment.entity';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../notification/notification.enum';
 
-import { Doctor } from '../doctor/doctor.entity';
-import { Patient } from '../patient/patient.entity';
-
 @Injectable()
 export class AppointmentReminderService {
   private readonly logger = new Logger(AppointmentReminderService.name);
@@ -44,6 +41,15 @@ export class AppointmentReminderService {
     for (const appointment of appointments) {
       const doctor = appointment.doctor;
       const patient = appointment.patient;
+      if (
+  appointment.status === AppointmentStatus.CANCELLED ||
+  appointment.status === AppointmentStatus.COMPLETED
+) {
+  this.logger.warn(
+    `Skipping appointment ${appointment.id}: appointment is ${appointment.status}`,
+  );
+  continue;
+}
 
       // Fix 2: Log invalid records instead of silently skipping
       if (!doctor) {
@@ -73,6 +79,12 @@ export class AppointmentReminderService {
       }
 
       const now = new Date();
+      if (appointmentTime <= now) {
+    this.logger.warn(
+        `Skipping appointment ${appointment.id}: appointment already passed`,
+    );
+    continue;
+}
       const diffMinutes =
         (appointmentTime.getTime() - now.getTime()) / 60000;
 
@@ -101,21 +113,21 @@ Time: ${appointment.startTime} - ${appointment.endTime}`;
         await queryRunner.startTransaction();
 
         try {
-          this.logger.log(
-            `Sending reminder for appointment ${appointment.id}`,
-          );
+           this.logger.log(
+  `Reminder sent for appointment ${appointment.id} to patient ${patient.id}`,
+);
 
           await this.notificationService.createNotification(
-            patient.id,
-            title,
-            message,
-            NotificationType.APPOINTMENT_REMINDER,
-          );
+    patient.id,
+    title,
+    message,
+    NotificationType.APPOINTMENT_REMINDER,
+    queryRunner.manager,
+);
 
-          await queryRunner.manager.update(Appointment, appointment.id, {
-            reminderSent: true,
-          });
+           appointment.reminderSent = true;
 
+await queryRunner.manager.save(appointment);
           await queryRunner.commitTransaction();
         } catch (error:any) {
           await queryRunner.rollbackTransaction();
@@ -129,4 +141,90 @@ Time: ${appointment.startTime} - ${appointment.endTime}`;
       }
     }
   }
+  @Cron('0 0 9 * * *')
+async handleDailyReminder() {
+  this.logger.log('Checking daily appointment reminders...');
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const tomorrowDate = tomorrow.toISOString().split('T')[0];
+
+  const appointments = await this.appointmentRepository
+    .createQueryBuilder('appointment')
+    .leftJoinAndSelect('appointment.doctor', 'doctor')
+    .leftJoinAndSelect('appointment.patient', 'patient')
+    .where('appointment.status = :status', {
+      status: AppointmentStatus.BOOKED,
+    })
+    .andWhere('appointment.dailyReminderSent = :sent', {
+      sent: false,
+    })
+    .andWhere('appointment.appointmentDate = :date', {
+      date: tomorrowDate,
+    })
+    .getMany();
+
+  for (const appointment of appointments) {
+    const doctor = appointment.doctor;
+    const patient = appointment.patient;
+
+    if (!doctor || !patient) {
+      this.logger.warn(
+        `Skipping appointment ${appointment.id}: missing doctor/patient`,
+      );
+      continue;
+    }
+
+    const title = 'Appointment Reminder';
+
+    const message =
+      doctor.schedulingType?.toUpperCase() === 'WAVE'
+        ? `Appointment Reminder
+
+Doctor: Dr. ${doctor.fullName}
+Reporting Time: ${appointment.startTime}
+Token Number: ${appointment.tokenNumber}`
+
+        : `Appointment Reminder
+
+Doctor: Dr. ${doctor.fullName}
+Date: ${appointment.appointmentDate}
+Time: ${appointment.startTime} - ${appointment.endTime}`;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await this.notificationService.createNotification(
+        patient.id,
+        title,
+        message,
+        NotificationType.APPOINTMENT_REMINDER,
+        queryRunner.manager,
+      );
+
+      appointment.dailyReminderSent = true;
+
+      await queryRunner.manager.save(appointment);
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `Daily reminder sent for appointment ${appointment.id}`,
+      );
+    } catch (error: any) {
+      await queryRunner.rollbackTransaction();
+
+      this.logger.error(
+        `Failed daily reminder for appointment ${appointment.id}: ${error.message}`,
+        error.stack,
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+}
 }

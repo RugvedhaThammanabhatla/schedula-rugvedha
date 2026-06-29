@@ -13,6 +13,7 @@ import { Notification } from './notification.entity';
 
 import { NotificationType }
 from './notification.enum';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class NotificationService {
@@ -224,57 +225,36 @@ count,
 
 }
 async createNotification(
+  patientId: number,
+  title: string,
+  message: string,
+  type: NotificationType,
+  manager?: EntityManager,
+) {
+  const repo = manager
+    ? manager.getRepository(Notification)
+    : this.notificationRepository;
 
-patientId:number,
+  const existing = await repo.findOne({
+    where: {
+      patientId,
+      message,
+      type,
+    },
+  });
 
-title:string,
+  if (existing) {
+    return existing;
+  }
 
-message:string,
+  const notification = repo.create({
+    patientId,
+    title,
+    message,
+    type,
+    isRead: false,
+  });
 
-type:NotificationType,
-
-){
-const existing =
-await this.notificationRepository.findOne({
-
-where:{
-
-patientId,
-
-message,
-
-type
-},
-
-});
-
-if(existing){
-
-return existing;
-
-}
-const notification =
-
-this.notificationRepository.create({
-
-patientId,
-
-title,
-
-message,
-
-type,
-
-isRead:false,
-
-});
-
-
-return await this.notificationRepository.save(
-
-notification,
-
-);
-
+  return repo.save(notification);
 }
 }

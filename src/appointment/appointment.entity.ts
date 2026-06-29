@@ -40,9 +40,15 @@ export class Appointment {
   status!: AppointmentStatus;
   
   @Column({
-default:false
+  default: false,
 })
-reminderSent!:boolean;
+reminderSent!: boolean;
+
+@Column({
+  default: false,
+})
+dailyReminderSent!: boolean;
+
 @Column({
   nullable: true,
 })
