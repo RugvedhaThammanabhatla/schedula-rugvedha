@@ -7,6 +7,9 @@ import { Appointment, AppointmentStatus } from './appointment.entity';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationType } from '../notification/notification.enum';
 
+import { Doctor } from '../doctor/doctor.entity';
+import { Patient } from '../patient/patient.entity';
+
 @Injectable()
 export class AppointmentReminderService {
   private readonly logger = new Logger(AppointmentReminderService.name);
@@ -26,19 +29,9 @@ export class AppointmentReminderService {
 
     // Fix 1: Load doctor and patient via joins — eliminates N+1 queries
     const appointments = await this.appointmentRepository
-      .createQueryBuilder('appointment')
-      .innerJoinAndMapOne(
-        'appointment.doctor',
-        'doctors',
-        'doctor',
-        'doctor.id = appointment.doctorId',
-      )
-      .innerJoinAndMapOne(
-        'appointment.patient',
-        'patient',
-        'patient',
-        'patient.id = appointment.patientId',
-      )
+       .createQueryBuilder('appointment')
+.leftJoinAndSelect('appointment.doctor', 'doctor')
+.leftJoinAndSelect('appointment.patient', 'patient')
       .where('appointment.status = :status', {
         status: AppointmentStatus.BOOKED,
       })
@@ -49,8 +42,8 @@ export class AppointmentReminderService {
       .getMany();
 
     for (const appointment of appointments) {
-      const doctor = (appointment as any).doctor;
-      const patient = (appointment as any).patient;
+      const doctor = appointment.doctor;
+      const patient = appointment.patient;
 
       // Fix 2: Log invalid records instead of silently skipping
       if (!doctor) {
@@ -87,10 +80,18 @@ export class AppointmentReminderService {
         const title = 'Appointment Reminder';
 
         // Fix 3: Corrected Wave message formatting (no stray newlines)
-        const message =
-          doctor.schedulingType?.toUpperCase() === 'WAVE'
-            ? `Reminder: You have an appointment with Dr. ${doctor.fullName}. Reporting Time: ${appointment.startTime}. Token Number: ${appointment.tokenNumber}.`
-            : `Reminder: You have an appointment with Dr. ${doctor.fullName} on ${appointment.appointmentDate} from ${appointment.startTime} to ${appointment.endTime}.`;
+         const message =
+  doctor.schedulingType?.toUpperCase() === 'WAVE'
+    ? `Appointment Reminder
+
+Doctor: Dr. ${doctor.fullName}
+Reporting Time: ${appointment.startTime}
+Token Number: ${appointment.tokenNumber}`
+    : `Appointment Reminder
+
+Doctor: Dr. ${doctor.fullName}
+Date: ${appointment.appointmentDate}
+Time: ${appointment.startTime} - ${appointment.endTime}`;
 
         // Fix 4: Wrap in transaction so reminderSent is only set if
         // notification creation succeeds — prevents duplicate reminders
@@ -116,7 +117,7 @@ export class AppointmentReminderService {
           });
 
           await queryRunner.commitTransaction();
-        } catch (error) {
+        } catch (error:any) {
           await queryRunner.rollbackTransaction();
           this.logger.error(
             `Failed to send reminder for appointment ${appointment.id}: ${error.message}`,

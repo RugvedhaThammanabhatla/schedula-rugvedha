@@ -3,7 +3,9 @@ import {
   PrimaryGeneratedColumn,
   Column,
 } from 'typeorm';
-
+import { ManyToOne, JoinColumn } from 'typeorm';
+import { Doctor } from '../doctor/doctor.entity';
+import { Patient } from '../patient/patient.entity';
 export enum AppointmentStatus {
   BOOKED = 'BOOKED',
   CANCELLED = 'CANCELLED',
@@ -13,29 +15,30 @@ export enum AppointmentStatus {
 @Entity('appointments')
 export class Appointment {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  doctorId: number;
+  doctorId!: number;
 
   @Column()
-  patientId: number;
+  patientId!: number;
 
   @Column()
-  appointmentDate: string;
+  appointmentDate!: string;
 
   @Column()
-  startTime: string;
+  startTime!: string;
 
   @Column()
-  endTime: string;
+  endTime!: string;
 
   @Column({
     type: 'enum',
     enum: AppointmentStatus,
     default: AppointmentStatus.BOOKED,
   })
-  status: AppointmentStatus;
+  status!: AppointmentStatus;
+  
   @Column({
 default:false
 })
@@ -44,4 +47,11 @@ reminderSent!:boolean;
   nullable: true,
 })
 tokenNumber!: number;
+@ManyToOne(() => Doctor)
+@JoinColumn({ name: 'doctorId' })
+doctor!: Doctor;
+
+@ManyToOne(() => Patient)
+@JoinColumn({ name: 'patientId' })
+patient!: Patient;
 }
