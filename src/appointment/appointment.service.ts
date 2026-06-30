@@ -106,10 +106,55 @@ async createAppointment(body: any) {
       'Past appointment not allowed',
     );
   }
+// Allow booking only for today
+appointmentDate.setHours(0, 0, 0, 0);
 
+if (appointmentDate.getTime() !== today.getTime()) {
+  throw new BadRequestException(
+    'Appointments can only be booked for today.',
+  );
+}
+// Validate consultation timings
+const consultationStart = new Date(
+  `${body.appointmentDate}T${body.startTime}`,
+);
 
+const consultationEnd = new Date(
+  `${body.appointmentDate}T${body.endTime}`,
+);
+
+if (consultationStart >= consultationEnd) {
+  throw new BadRequestException(
+    'Invalid consultation timings.',
+  );
+}
   let tokenNumber = 0;
+// Booking window validation
+const bookingOpenTime = new Date(consultationStart);
+bookingOpenTime.setHours(
+  bookingOpenTime.getHours() - 2,
+);
 
+const bookingCloseTime = new Date(consultationEnd);
+bookingCloseTime.setHours(
+  bookingCloseTime.getHours() - 1,
+);
+
+const currentTime = new Date();
+currentTime.setSeconds(0);
+currentTime.setMilliseconds(0);
+
+if (currentTime < bookingOpenTime) {
+  throw new BadRequestException(
+    'Booking window has not opened yet.',
+  );
+}
+
+if (currentTime > bookingCloseTime) {
+  throw new BadRequestException(
+    'Booking window has closed.',
+  );
+}
 
 
   if (
