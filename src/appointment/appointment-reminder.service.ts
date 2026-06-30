@@ -27,8 +27,8 @@ export class AppointmentReminderService {
 
     const appointments = await this.appointmentRepository
       .createQueryBuilder('appointment')
-      .leftJoinAndSelect('appointment.doctor', 'doctor')
-      .leftJoinAndSelect('appointment.patient', 'patient')
+      .innerJoinAndSelect('appointment.doctor', 'doctor')
+      .innerJoinAndSelect('appointment.patient', 'patient')
       .where('appointment.status = :status', {
         status: AppointmentStatus.BOOKED,
       })
@@ -86,7 +86,7 @@ export class AppointmentReminderService {
         continue;
       }
 
-      const title = 'Appointment Reminder';
+      const title = 'Appointment Reminder(1 Hour)';
 
       const message =
         doctor.schedulingType?.toUpperCase() === 'WAVE'
@@ -114,17 +114,19 @@ export class AppointmentReminderService {
           queryRunner.manager,
         );
 
-        appointment.reminderSent = true;
-
-        await queryRunner.manager.save(
-          appointment,
-        );
+        await queryRunner.manager.update(
+  Appointment,
+  appointment.id,
+  {
+    reminderSent: true,
+  },
+);
 
         await queryRunner.commitTransaction();
 
         this.logger.log(
-          `Reminder sent for appointment ${appointment.id}`,
-        );
+  `Hourly reminder sent for appointment ${appointment.id} to patient ${patient.id}`,
+);
       } catch (error: any) {
         await queryRunner.rollbackTransaction();
 
@@ -150,8 +152,8 @@ export class AppointmentReminderService {
 
     const appointments = await this.appointmentRepository
       .createQueryBuilder('appointment')
-      .leftJoinAndSelect('appointment.doctor', 'doctor')
-      .leftJoinAndSelect('appointment.patient', 'patient')
+      .innerJoinAndSelect('appointment.doctor', 'doctor')
+      .innerJoinAndSelect('appointment.patient', 'patient')
       .where('appointment.status = :status', {
         status: AppointmentStatus.BOOKED,
       })
@@ -180,7 +182,7 @@ export class AppointmentReminderService {
         continue;
       }
 
-      const title = 'Appointment Reminder';
+      const title = 'Appointment Reminder(1 Day)';
 
       const message =
         doctor.schedulingType?.toUpperCase() ===
@@ -209,17 +211,19 @@ export class AppointmentReminderService {
           queryRunner.manager,
         );
 
-        appointment.dailyReminderSent = true;
-
-        await queryRunner.manager.save(
-          appointment,
-        );
+        await queryRunner.manager.update(
+  Appointment,
+  appointment.id,
+  {
+    dailyReminderSent: true,
+  },
+);
 
         await queryRunner.commitTransaction();
 
         this.logger.log(
-          `Daily reminder sent for appointment ${appointment.id}`,
-        );
+  `Daily reminder sent for appointment ${appointment.id} to patient ${patient.id}`,
+);
       } catch (error: any) {
         await queryRunner.rollbackTransaction();
 
