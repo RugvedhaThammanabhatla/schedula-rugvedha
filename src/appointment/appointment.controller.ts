@@ -51,9 +51,6 @@ payload,
 
 );
 
-    return this.appointmentService.createAppointment(
-      body,
-    );
   }
 
 

@@ -7,6 +7,7 @@ import {
 export enum AppointmentStatus {
   BOOKED = 'BOOKED',
   CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED'
 }
 
 @Entity('appointments')
@@ -35,6 +36,10 @@ export class Appointment {
     default: AppointmentStatus.BOOKED,
   })
   status: AppointmentStatus;
+  @Column({
+default:false
+})
+reminderSent!:boolean;
 @Column({
   nullable: true,
 })
