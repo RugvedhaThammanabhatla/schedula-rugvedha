@@ -47,7 +47,15 @@ private readonly notificationService:
 NotificationService,
   ) {}
 async createAppointment(body: any) {
-
+if (
+  !body.appointmentDate ||
+  !body.startTime ||
+  !body.endTime
+) {
+  throw new BadRequestException(
+    'Appointment date, start time and end time are required.',
+  );
+}
   const doctor =
     await this.doctorRepository.findOne({
       where: {
@@ -86,26 +94,62 @@ async createAppointment(body: any) {
   }
 
 
-  const appointmentDate =
-    new Date(body.appointmentDate);
+const appointmentDate = new Date(body.appointmentDate);
 
-  const today =
-    new Date();
-
-  today.setHours(
-    0,
-    0,
-    0,
-    0,
+if (isNaN(appointmentDate.getTime())) {
+  throw new BadRequestException(
+    'Invalid appointment date format.',
   );
+}
 
-  if (
-    appointmentDate < today
-  ) {
-    throw new BadRequestException(
-      'Past appointment not allowed',
-    );
-  }
+const today = new Date().toISOString().split('T')[0];
+
+// Past date
+if (body.appointmentDate < today) {
+  throw new BadRequestException(
+    'Past date booking is not allowed.',
+  );
+}
+
+// Future date
+if (body.appointmentDate > today) {
+  throw new BadRequestException(
+    'Future date booking is not allowed. Booking is allowed only for today.',
+  );
+}
+
+const dayOfWeek = appointmentDate
+  .toLocaleDateString('en-US', {
+    weekday: 'long',
+  })
+  .toUpperCase();
+
+const customAvailability =
+  await this.customRepository.findOne({
+    where: {
+      doctorId: doctor.id,
+      date: body.appointmentDate,
+      startTime: body.startTime,
+      endTime: body.endTime,
+    },
+  });
+
+const recurringAvailability =
+  await this.recurringRepository.find({
+    where: {
+      doctorId: doctor.id,
+      dayOfWeek,
+    },
+  });
+
+if (
+  !customAvailability &&
+  recurringAvailability.length === 0
+) {
+  throw new BadRequestException(
+    'Doctor is not available for the selected date.',
+  );
+}
 
 
   let tokenNumber = 0;
@@ -164,7 +208,19 @@ async createAppointment(body: any) {
   }
 
   else {
+const slotExists =
+  customAvailability ||
+  recurringAvailability.some(
+    slot =>
+      slot.startTime === body.startTime &&
+      slot.endTime === body.endTime,
+  );
 
+if (!slotExists) {
+  throw new BadRequestException(
+    'Selected slot is not available.',
+  );
+}
     const duplicate =
 
       await this.appointmentRepository.findOne({
@@ -230,7 +286,11 @@ appointment,
 
 );
 
-
+if (!savedAppointment) {
+  throw new BadRequestException(
+    'Failed to create appointment',
+  );
+}
 
 await this.notificationService.createNotification(
 
@@ -479,7 +539,6 @@ const {
           appointment.doctorId,
       },
     });
-
   if (!doctor) {
     throw new NotFoundException(
       'Doctor not found',
