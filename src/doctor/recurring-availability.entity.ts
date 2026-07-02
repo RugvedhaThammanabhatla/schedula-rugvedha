@@ -3,17 +3,27 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 @Entity()
 export class RecurringAvailability {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  doctorId: number;
+  doctorId!: number;
 
   @Column()
-  dayOfWeek: string;
+  dayOfWeek!: string;
 
   @Column()
-  startTime: string;
+  startTime!: string;
 
   @Column()
-  endTime: string;
+  endTime!: string;
+
+  @Column({
+  default: false,
+})
+allowFutureBooking!: boolean;
+
+@Column({
+  nullable: true,
+})
+maxFutureBookingDays!: number;
 }

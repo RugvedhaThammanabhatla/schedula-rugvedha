@@ -102,11 +102,20 @@ if (isNaN(appointmentDate.getTime())) {
   );
 }
 
-// Allow booking only for today
 appointmentDate.setHours(0, 0, 0, 0);
+
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
+const differenceInDays = Math.floor(
+  (appointmentDate.getTime() - today.getTime()) /
+  (1000 * 60 * 60 * 24),
+);
+if (differenceInDays < 0) {
+  throw new BadRequestException(
+    'Past date booking is not allowed.',
+  );
+}
 const dayOfWeek = appointmentDate
   .toLocaleDateString('en-US', {
     weekday: 'long',
@@ -130,20 +139,44 @@ const recurringAvailability =
       dayOfWeek,
     },
   });
-
+// Custom availability overrides recurring availability
 if (
-  !customAvailability &&
-  recurringAvailability.length === 0
+  customAvailability &&
+  customAvailability.allowFutureBooking === false &&
+  differenceInDays > 0
 ) {
   throw new BadRequestException(
-    'Doctor is not available for the selected date.',
+    'Future booking is not allowed for this date.',
   );
 }
 
-if (appointmentDate.getTime() !== today.getTime()) {
+const recurringConfig = recurringAvailability.find(
+  slot =>
+    slot.startTime === body.startTime &&
+    slot.endTime === body.endTime,
+);
+
+if (!recurringConfig) {
   throw new BadRequestException(
-    'Appointments can only be booked for today.',
+    'Selected slot is not available.',
   );
+}
+
+if (!recurringConfig.allowFutureBooking) {
+  if (differenceInDays > 0) {
+    throw new BadRequestException(
+      'Doctor accepts only today appointments.',
+    );
+  }
+} else {
+  const maxDays =
+    recurringConfig.maxFutureBookingDays ?? 7;
+
+  if (differenceInDays > maxDays) {
+    throw new BadRequestException(
+      `Appointments can only be booked within ${maxDays} days.`,
+    );
+  }
 }
 // Validate consultation timings
 const consultationStart = new Date(
@@ -175,18 +208,19 @@ const currentTime = new Date();
 currentTime.setSeconds(0);
 currentTime.setMilliseconds(0);
 
-if (currentTime < bookingOpenTime) {
-  throw new BadRequestException(
-    'Booking window has not opened yet.',
-  );
-}
+if (differenceInDays === 0) {
+  if (currentTime < bookingOpenTime) {
+    throw new BadRequestException(
+      'Booking window has not opened yet.',
+    );
+  }
 
-if (currentTime > bookingCloseTime) {
-  throw new BadRequestException(
-    'Booking window has closed.',
-  );
+  if (currentTime > bookingCloseTime) {
+    throw new BadRequestException(
+      'Booking window has closed.',
+    );
+  }
 }
-
 
   if (
 
@@ -815,8 +849,21 @@ async findNextAvailableSlot(doctorId: number) {
     );
   }
 
+const recurringConfig =
+  await this.recurringRepository.findOne({
+    where: { doctorId },
+  });
 
-  const SEARCH_WINDOW_DAYS = 3;
+if (!recurringConfig) {
+  throw new BadRequestException(
+    'Doctor availability not configured.',
+  );
+}
+
+const SEARCH_WINDOW_DAYS =
+recurringConfig?.allowFutureBooking
+? recurringConfig.maxFutureBookingDays ?? 7
+: 0;
 const today = new Date();
 
   for (let i = 0; i <= SEARCH_WINDOW_DAYS; i++) {

@@ -89,7 +89,14 @@ export class DoctorService {
   return doctor;
   }
    async createAvailability(body: any) {
-  const { doctorId, dayOfWeek, startTime, endTime } = body;
+  const {
+  doctorId,
+  dayOfWeek,
+  startTime,
+  endTime,
+  allowFutureBooking,
+  maxFutureBookingDays,
+} = body;
 
   if (startTime >= endTime) {
     throw new BadRequestException('Invalid time range');
@@ -155,11 +162,13 @@ async getAvailability() {
   }
 
   const {
-    doctorId,
-    dayOfWeek,
-    startTime,
-    endTime,
-  } = body;
+  doctorId,
+  dayOfWeek,
+  startTime,
+  endTime,
+  allowFutureBooking,
+  maxFutureBookingDays,
+} = body;
 
   if (startTime >= endTime) {
     throw new BadRequestException(

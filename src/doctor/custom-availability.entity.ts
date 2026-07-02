@@ -3,17 +3,22 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 @Entity()
 export class CustomAvailability {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  doctorId: number;
+  doctorId!: number;
 
   @Column()
-  date: string;
+  date!: string;
 
   @Column()
-  startTime: string;
+  startTime!: string;
 
   @Column()
-  endTime: string;
+  endTime!: string;
+
+  @Column({
+  default: true,
+})
+allowFutureBooking!: boolean;
 }
