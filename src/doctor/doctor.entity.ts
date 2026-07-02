@@ -19,7 +19,7 @@ export class Doctor {
 
   @Column()
   availability!: boolean;
-
+ 
   @Column({
     default: 'STREAM',
   })
