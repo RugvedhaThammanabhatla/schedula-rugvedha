@@ -25,6 +25,7 @@ from '../notification/notification.service';
 
 import { NotificationType }
 from '../notification/notification.enum';
+import { DoctorLeave } from '../doctor-leave/doctor-leave.entity';
 @Injectable()
 export class AppointmentService {
   constructor(
@@ -41,8 +42,10 @@ private recurringRepository:
 Repository<RecurringAvailability>,
 
 @InjectRepository(CustomAvailability)
-private customRepository:
+private customRepository: 
 Repository<CustomAvailability>,
+@InjectRepository(DoctorLeave)
+private leaveRepository: Repository<DoctorLeave>,
 private readonly notificationService:
 NotificationService,
   ) {}
@@ -68,6 +71,19 @@ if (
       'Doctor not found',
     );
   }
+  const doctorLeave =
+  await this.leaveRepository.findOne({
+    where: {
+      doctorId: doctor.id,
+      leaveDate: body.appointmentDate,
+    },
+  });
+
+if (doctorLeave) {
+  throw new BadRequestException(
+    'Doctor is unavailable on this date. Please select another available date.',
+  );
+}
   if (
   doctor.schedulingType?.toUpperCase() !==
     'STREAM' &&
@@ -613,6 +629,18 @@ const {
 if (!doctor.availability) {
   throw new BadRequestException(
     'Doctor unavailable',
+  );
+}
+const doctorLeave = await this.leaveRepository.findOne({
+  where: {
+    doctorId: doctor.id,
+    leaveDate: appointmentDate,
+  },
+});
+
+if (doctorLeave) {
+  throw new BadRequestException(
+    'Doctor is unavailable on this date. Please select another available date.',
   );
 }
   if (

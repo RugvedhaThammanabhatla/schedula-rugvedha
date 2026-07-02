@@ -123,7 +123,7 @@ RolesGuard,
 getUnreadCount(
 
 @Req()
-req,
+req:any,
 
 ){
 

@@ -14,6 +14,7 @@ import { CustomAvailability }
 from '../doctor/custom-availability.entity';
 import { NotificationModule }
 from '../notification/notification.module';
+import { DoctorLeave } from '../doctor-leave/doctor-leave.entity';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ from '../notification/notification.module';
       Doctor,
       Patient,
       RecurringAvailability,
-      CustomAvailability
+      CustomAvailability,
+      DoctorLeave,
     ]),
     NotificationModule,
   ],

@@ -12,34 +12,34 @@ import { NotificationType } from './notification.enum';
 export class Notification {
 
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  patientId: number;
+  patientId!: number;
 
   @Column()
-  title: string;
+  title!: string;
 
   @Column({
     type: 'text',
   })
-  message: string;
+  message!: string;
 
   @Column({
     type: 'enum',
     enum: NotificationType,
   })
-  type: NotificationType;
+  type!: NotificationType;
 
   @Column({
     default: false,
   })
-  isRead: boolean;
+  isRead!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
 }
