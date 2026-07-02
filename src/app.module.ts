@@ -15,6 +15,7 @@ import { Doctor } from './doctor/doctor.entity';
 import { Patient } from './patient/patient.entity';
 import { Appointment } from './appointment/appointment.entity';
 import { NotificationModule } from './notification/notification.module';
+import { DoctorLeaveModule } from './doctor-leave/doctor-leave.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { NotificationModule } from './notification/notification.module';
     PatientModule,
     AppointmentModule,
     NotificationModule,
+    DoctorLeaveModule,
   ],
 
   controllers: [AppController],
